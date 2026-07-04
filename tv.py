@@ -16,7 +16,11 @@ def get_channels():
     # grab channel info from tvheadend
     url = tvheadend + '/playlist/channels'
     print ("Connecting to ", url)
-    page = urllib.request.urlopen(url)
+    try: page = urllib.request.urlopen(url)
+    except: 
+        print ("ERR: cannot connect !")
+        return 0
+
     playlist = page.read().decode().split('#EXT')
     print("Recieved channel list, processing")
     for chaninfo in playlist:
@@ -34,6 +38,7 @@ def get_channels():
     return (len(channels))
 
 numchannels = get_channels()
+if numchannels == 0: sys.exit(2)
 
 pygame.init()
 #screen = pygame.display.set_mode((800,600),pygame.RESIZABLE)
