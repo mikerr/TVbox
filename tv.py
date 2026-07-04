@@ -37,31 +37,11 @@ def get_channels():
         urls.append(url)
     return (len(channels))
 
-numchannels = get_channels()
-if numchannels == 0: sys.exit(2)
-
-pygame.init()
-#screen = pygame.display.set_mode((800,600),pygame.RESIZABLE)
-#font = pygame.font.Font(pygame.font.get_default_font(), 36)
-#smallfont = pygame.font.Font(pygame.font.get_default_font(), 24)
-
-vlcInstance = vlc.Instance()
-vlcInstance.log_unset()
-media = vlcInstance.media_new(urls[0])
-player = vlcInstance.media_player_new()
-
-# Pass pygame window id to vlc player, so it can render its contents there.
-#win_id = pygame.display.get_wm_info()['window']
-#player.set_xwindow(win_id)
-player.set_media(media)
-#pygame.mixer.quit()
-player.play()
-
 def overlay(overlaytext,size):
     player.video_set_marquee_int(vlc.VideoMarqueeOption.Enable,1)
     player.video_set_marquee_int(vlc.VideoMarqueeOption.Size,size)
     player.video_set_marquee_int(vlc.VideoMarqueeOption.Timeout,5000)
-    player.video_set_marquee_int(vlc.VideoMarqueeOption.Position,6)
+    player.video_set_marquee_int(vlc.VideoMarqueeOption.Position,5)
     player.video_set_marquee_string(vlc.VideoMarqueeOption.Text,overlaytext)
 
 def epg_info(channelname,num):
@@ -90,21 +70,73 @@ def change_channel(n):
     media = vlcInstance.media_new(urls[n])
     player.set_media(media)
     player.play()
+def pad(text):
+    padding = length - len(text)
+
+    return (pad)
+def epg_grid():
+
+    api_epg = tvheadend + "/api/epg/events/grid?"
+    try: page = urllib.request.urlopen(api_epg)
+    except: 
+        print ("tvheadend http error")
+        return
+    playlist = page.read().decode()
+    data = json.loads(playlist)
+    epg = data["entries"]
+
+    now = []
+    for item in epg:
+        now.append( item['channelNumber'] + "\t" +  item['channelName'] + " \t " + item['title'])
+
+    now.sort(key= lambda x: int(str(x.split()[0])) )
+    overlaytext = "Guide\r\n"
+    for item in now:
+        overlaytext += item + "\n"
+
+    overlay(overlaytext,24)
+
+
+numchannels = get_channels()
+if numchannels == 0: sys.exit(2)
+
+pygame.init()
+screen = pygame.display.set_mode((800,600),pygame.RESIZABLE)
+screen = pygame.display.set_caption("TV")
+font = pygame.font.Font(pygame.font.get_default_font(), 36)
+smallfont = pygame.font.Font(pygame.font.get_default_font(), 24)
+
+vlcInstance = vlc.Instance()
+vlcInstance.log_unset()
+media = vlcInstance.media_new(urls[0])
+player = vlcInstance.media_player_new()
+
+# Pass pygame window id to vlc player, so it can render its contents there.
+win_id = pygame.display.get_wm_info()['window']
+player.set_xwindow(win_id)
+player.set_media(media)
+pygame.mixer.quit()
+player.play()
 
 n = 0
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: sys.exit(2)
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-               n -= 1
-               if n < 0 : n = numchannels - 1
-               change_channel(n)
+            match(event.key):
+                case pygame.K_LEFT | pygame.K_p:
+                   n -= 1
+                   if n < 0 : n = numchannels - 1
+                   change_channel(n)
 
-            if event.key == pygame.K_RIGHT:
-               n += 1
-               if n >= numchannels: n = 0
-               change_channel(n)
+                case pygame.K_RIGHT | pygame.K_n:
+                   n += 1
+                   if n >= numchannels: n = 0
+                   change_channel(n)
 
-            if event.key == pygame.K_i: epg_info(names[n],2)
-            if event.key == pygame.K_q: sys.exit(2)
+                case pygame.K_i: 
+                    epg_info(names[n],2)
+                case pygame.K_c | pygame.K_l: 
+                    epg_grid()
+                case pygame.K_q: 
+                    sys.exit(2)
